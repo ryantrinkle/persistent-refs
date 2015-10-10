@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeOperators #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -23,13 +24,15 @@ module Data.STRef.Persistent (
   , asInt
     -- * 'MonadRef' Operations
   , MonadRef(..)
+  , newSTRef
+  , readSTRef
+  , writeSTRef
   ) where
 
 import Control.Monad.State
 import Control.Monad.Ref
 import Control.Monad.ST.Persistent.Internal
 import Data.IntMap as IntMap
-import Data.Maybe
 import Unsafe.Coerce
 
 newtype STRef s a = STRef Int
@@ -48,11 +51,12 @@ newSTRef x = STT $ do
     put $ s { heap = heap', next = next' }
     return (STRef i)
 
-readSTRef :: Monad m => STRef s a -> STT s m a
-readSTRef (STRef i) = STT $
-    return . unsafeCoerce . fromJust . IntMap.lookup i =<< gets heap
+readSTRef :: (Monad m, s :< s') => STRef s a -> STT s' m a
+readSTRef (STRef i) = STT $ do
+  Just x <- liftM (IntMap.lookup i) $ gets heap
+  return $ unsafeCoerce x
 
-writeSTRef :: Monad m => STRef s a -> a -> STT s m ()
+writeSTRef :: (Monad m, s :< s') => STRef s a -> a -> STT s' m ()
 writeSTRef (STRef i) x = STT $ do
     s <- get
     let heap' = insert i (unsafeCoerce x) (heap s)

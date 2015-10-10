@@ -23,6 +23,10 @@ module Control.Monad.ST.Persistent (
     -- * The Persistent 'ST' Monad transformer
   , STT
   , runSTT
+  , runSTT'
+  , continueSTT
+  , continueSTT'
+  , STTCont
   ) where
 
 import Control.Monad.ST.Persistent.Internal

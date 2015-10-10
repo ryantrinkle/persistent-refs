@@ -1,6 +1,15 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Control.Monad.ST.Persistent.Internal where
 
@@ -29,7 +38,7 @@ type ST s = STT s Identity
 runST :: (forall s. ST s a) -> a
 runST m = runIdentity (runSTT m)
 
-newtype STT s m a = STT (StateT Heap m a)
+newtype STT s m a = STT { unSTT :: StateT Heap m a }
     deriving (Functor, Applicative, Alternative, Monad, MonadIO, MonadPlus, MonadTrans)
 
 -- | Run a computation that uses persistent references, and return a
@@ -37,3 +46,21 @@ newtype STT s m a = STT (StateT Heap m a)
 -- 'Control.Monad.ST.runST'.
 runSTT :: Monad m => (forall s. STT s m a) -> m a
 runSTT (STT c) = evalStateT c emptyHeap
+
+data STTCont a = forall s. STTCont (a s, Heap)
+
+runSTT' :: Monad m => (forall s. STT s m (a s)) -> m (STTCont a)
+runSTT' (STT c) = liftM STTCont $ runStateT c emptyHeap
+
+data Succ :: * -> *
+
+class a :< b
+instance a :< a
+instance {-# OVERLAPPABLE #-} (a :< b, b :< c) => a :< c
+instance {-# OVERLAPS #-} a :< Succ a
+
+continueSTT' :: forall a b m. Monad m => (forall s. a s -> STT s m (b s)) -> STTCont a -> m (STTCont b)
+continueSTT' c (STTCont (a, h)) = liftM STTCont $ runStateT (unSTT $ c a) h
+
+continueSTT :: forall a b m. Monad m => (forall s. a s -> STT s m b) -> STTCont a -> m b
+continueSTT c (STTCont (a, h)) = evalStateT (unSTT $ c a) h
