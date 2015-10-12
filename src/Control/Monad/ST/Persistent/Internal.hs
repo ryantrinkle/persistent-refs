@@ -64,3 +64,15 @@ continueSTT' c (STTCont (a, h)) = liftM STTCont $ runStateT (unSTT $ c a) h
 
 continueSTT :: forall a b m. Monad m => (forall s. a s -> STT s m b) -> STTCont a -> m b
 continueSTT c (STTCont (a, h)) = evalStateT (unSTT $ c a) h
+
+newtype STTSuspension r a = STTSuspension { unSTTSuspension :: (a r, Heap) }
+
+suspendSTT :: Monad m => a s -> (forall r. STTSuspension r a -> m (STTSuspension r b)) -> STT s m (b s)
+suspendSTT a f = STT $ do
+  h <- get
+  STTSuspension (b, h') <- lift $ f $ STTSuspension (a, h)
+  put h'
+  return b
+
+resumeSTT :: Monad m => STTSuspension r a -> (forall s. a s -> STT s m (b s)) -> m (STTSuspension r b)
+resumeSTT (STTSuspension (a, h)) f = liftM STTSuspension $ runStateT (unSTT $ f a) h

@@ -27,6 +27,9 @@ module Control.Monad.ST.Persistent (
   , continueSTT
   , continueSTT'
   , STTCont
+  , STTSuspension
+  , suspendSTT
+  , resumeSTT
   ) where
 
 import Control.Monad.ST.Persistent.Internal
