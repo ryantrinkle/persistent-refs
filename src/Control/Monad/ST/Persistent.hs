@@ -30,6 +30,7 @@ module Control.Monad.ST.Persistent (
   , STTSuspension
   , suspendSTT
   , resumeSTT
+  , suspensionToCont
   ) where
 
 import Control.Monad.ST.Persistent.Internal

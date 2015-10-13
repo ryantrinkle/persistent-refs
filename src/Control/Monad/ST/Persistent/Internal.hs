@@ -76,3 +76,6 @@ suspendSTT a f = STT $ do
 
 resumeSTT :: Monad m => STTSuspension r a -> (forall s. a s -> STT s m (b s)) -> m (STTSuspension r b)
 resumeSTT (STTSuspension (a, h)) f = liftM STTSuspension $ runStateT (unSTT $ f a) h
+
+suspensionToCont :: STTSuspension r a -> STTCont a
+suspensionToCont (STTSuspension x) = STTCont x
